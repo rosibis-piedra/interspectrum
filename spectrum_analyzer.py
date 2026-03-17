@@ -27,56 +27,38 @@ class SpectrumAnalyzer:
         self.model_name = model_name
 
     def extract_spectrum(self, text: str) -> dict:
-        """
-        Extract the internal spectrum of a text.
-        
-        Returns the shape and size of the semantic
-        structure before it becomes words.
-        """
-
-        # Split into sentences
         sentences = [s.strip() for s in text.split('.') if s.strip()]
         
         if not sentences:
             return {}
 
-        # Generate embeddings - this is the internal space
         embeddings = self.model.encode(sentences)
 
-        # Measure the figure in the center of the cube
         spectrum = {
             'sentences': sentences,
             'embeddings': embeddings,
             'size': self._measure_size(embeddings),
             'shape': self._measure_shape(embeddings),
             'symmetry': self._measure_symmetry(embeddings),
+            'dispersion': self._measure_dispersion(embeddings),
+            'density': self._measure_density(embeddings),
             'coords_3d': self._reduce_to_3d(embeddings)
         }
 
         return spectrum
 
     def _measure_size(self, embeddings: np.ndarray) -> float:
-        """
-        Size = how much semantic space this text occupies.
-        Large size = rich, expansive meaning.
-        Small size = concentrated, focused meaning.
-        """
         centroid = np.mean(embeddings, axis=0)
         distances = np.linalg.norm(embeddings - centroid, axis=1)
         return float(np.mean(distances))
 
     def _measure_shape(self, embeddings: np.ndarray) -> dict:
-        """
-        Shape = how the meaning is distributed internally.
-        This is the figure that forms in the center of the cube.
-        """
         if len(embeddings) < 2:
             return {'variance_ratio': [], 'dominant_dimensions': 0}
 
         pca = PCA()
         pca.fit(embeddings)
 
-        # How many dimensions carry most of the meaning?
         cumulative = np.cumsum(pca.explained_variance_ratio_)
         dominant = int(np.searchsorted(cumulative, 0.90)) + 1
 
@@ -86,18 +68,7 @@ class SpectrumAnalyzer:
         }
 
     def _measure_symmetry(self, embeddings: np.ndarray) -> float:
-        """
-        Symmetry = dimensional balance.
-        High symmetry = coherent, well-coupled meaning.
-        Low symmetry = gaps, disonance, misalignment.
-        
-        This is what Rosibis sees as the reflection 
-        between faces of the cube.
-        """
         sim_matrix = cosine_similarity(embeddings)
-        
-        # Symmetry = how similar each sentence is to all others
-        # Perfect symmetry = all sentences are equally related
         upper = sim_matrix[np.triu_indices_from(sim_matrix, k=1)]
         
         if len(upper) == 0:
@@ -105,11 +76,36 @@ class SpectrumAnalyzer:
             
         return float(1.0 - np.std(upper))
 
+    def _measure_dispersion(self, embeddings: np.ndarray) -> float:
+        """
+        Dispersion = the peaks Rosibis sees.
+        High dispersion = points scattered far from center = spiky figure.
+        Low dispersion = points close to center = dense, coherent figure.
+        """
+        centroid = np.mean(embeddings, axis=0)
+        distances = np.linalg.norm(embeddings - centroid, axis=1)
+        
+        # Dispersion = how much variation in distances from center
+        # High std = some points very far, some very close = peaks
+        return float(np.std(distances))
+
+    def _measure_density(self, embeddings: np.ndarray) -> float:
+        """
+        Density = does the figure have a clear center?
+        High density = strong gravitational center, coherent meaning.
+        Low density = no center, dispersed meaning.
+        """
+        centroid = np.mean(embeddings, axis=0)
+        distances = np.linalg.norm(embeddings - centroid, axis=1)
+        
+        # Density = inverse of mean distance from center
+        # Close to center = high density
+        mean_dist = np.mean(distances)
+        if mean_dist == 0:
+            return 1.0
+        return float(1.0 / (1.0 + mean_dist))
+
     def _reduce_to_3d(self, embeddings: np.ndarray) -> list:
-        """
-        Reduce to 3D for visualization.
-        This is the cube Rosibis sees.
-        """
         if len(embeddings) < 3:
             pca = PCA(n_components=len(embeddings))
         else:
@@ -119,10 +115,6 @@ class SpectrumAnalyzer:
         return coords.tolist()
 
     def compare(self, text_a: str, text_b: str) -> dict:
-        """
-        Compare the internal spectrum of two texts.
-        Not their surface similarity - their internal shape.
-        """
         spectrum_a = self.extract_spectrum(text_a)
         spectrum_b = self.extract_spectrum(text_b)
 
@@ -135,6 +127,12 @@ class SpectrumAnalyzer:
             'size_difference': abs(spectrum_a['size'] - spectrum_b['size']),
             'symmetry_difference': abs(
                 spectrum_a['symmetry'] - spectrum_b['symmetry']
+            ),
+            'dispersion_difference': abs(
+                spectrum_a['dispersion'] - spectrum_b['dispersion']
+            ),
+            'density_difference': abs(
+                spectrum_a['density'] - spectrum_b['density']
             ),
             'dimensional_gap': abs(
                 spectrum_a['shape']['dominant_dimensions'] - 

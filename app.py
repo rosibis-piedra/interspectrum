@@ -40,23 +40,37 @@ if st.button("Read Spectrum", type="primary"):
 
         if spectrum:
             # Metrics
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
                 st.metric(
                     "Size",
                     f"{spectrum['size']:.3f}",
-                    help="How much semantic space this text occupies"
+                    help="Semantic space occupied"
                 )
             
             with col2:
                 st.metric(
                     "Symmetry",
                     f"{spectrum['symmetry']:.3f}",
-                    help="Dimensional balance - how coherent the meaning is"
+                    help="Dimensional balance"
                 )
             
             with col3:
+                st.metric(
+                    "Dispersion",
+                    f"{spectrum['dispersion']:.3f}",
+                    help="The peaks - how scattered the points are from center"
+                )
+
+            with col4:
+                st.metric(
+                    "Density",
+                    f"{spectrum['density']:.3f}",
+                    help="Gravitational center - how strong the core is"
+                )
+            
+            with col5:
                 st.metric(
                     "Dominant Dimensions",
                     spectrum['shape']['dominant_dimensions'],
