@@ -18,14 +18,12 @@ st.set_page_config(
 st.title("🌊 InterSpectrum")
 st.caption("Reading the internal spectrum of AI models")
 
-# Initialize analyzer
 @st.cache_resource
 def load_analyzer():
     return SpectrumAnalyzer()
 
 analyzer = load_analyzer()
 
-# Input
 st.markdown("---")
 text = st.text_area(
     "Enter text to read its internal spectrum",
@@ -39,7 +37,6 @@ if st.button("Read Spectrum", type="primary"):
             spectrum = analyzer.extract_spectrum(text)
 
         if spectrum:
-            # Metrics
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
@@ -77,7 +74,6 @@ if st.button("Read Spectrum", type="primary"):
                     help="How many dimensions carry 90% of the meaning"
                 )
 
-            # 3D Visualization - the cube
             st.markdown("---")
             st.subheader("Internal Structure")
             st.caption("The figure that forms before words appear")
@@ -87,7 +83,6 @@ if st.button("Read Spectrum", type="primary"):
 
             fig = go.Figure()
 
-            # Points
             fig.add_trace(go.Scatter3d(
                 x=coords[:, 0] if coords.shape[1] > 0 else [],
                 y=coords[:, 1] if coords.shape[1] > 1 else [],
@@ -104,7 +99,6 @@ if st.button("Read Spectrum", type="primary"):
                 hoverinfo='text'
             ))
 
-            # Strings between points - the vibrating strings
             for i in range(len(coords)):
                 for j in range(i+1, len(coords)):
                     fig.add_trace(go.Scatter3d(
@@ -131,7 +125,6 @@ if st.button("Read Spectrum", type="primary"):
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Sentences
             st.markdown("---")
             st.subheader("Sentences detected")
             for i, s in enumerate(sentences):
