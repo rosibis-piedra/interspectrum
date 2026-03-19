@@ -33,7 +33,6 @@ def load_louise():
 analyzer = load_analyzer()
 louise = load_louise()
 
-# Mode selector
 mode = st.radio(
     "Mode",
     ["Single Text", "Compare Two Texts", "Louise Memory"],
@@ -47,25 +46,27 @@ def show_spectrum(spectrum, label=""):
         st.subheader(label)
 
     col1, col2, col3, col4, col5 = st.columns(5)
-    
     with col1:
-        st.metric("Size", f"{spectrum['size']:.3f}",
-            help="Semantic space occupied")
+        st.metric("Size", f"{spectrum['size']:.3f}", help="Semantic space occupied")
     with col2:
-        st.metric("Symmetry", f"{spectrum['symmetry']:.3f}",
-            help="Dimensional balance")
+        st.metric("Symmetry", f"{spectrum['symmetry']:.3f}", help="Dimensional balance")
     with col3:
-        st.metric("Dispersion", f"{spectrum['dispersion']:.3f}",
-            help="The peaks - scatter from center")
+        st.metric("Dispersion", f"{spectrum['dispersion']:.3f}", help="Scatter from center")
     with col4:
-        st.metric("Density", f"{spectrum['density']:.3f}",
-            help="Gravitational center strength")
+        st.metric("Density", f"{spectrum['density']:.3f}", help="Gravitational center strength")
     with col5:
-        st.metric("Dimensions", spectrum['shape']['dominant_dimensions'],
-            help="Dominant dimensions carrying 90% of meaning")
+        st.metric("Dimensions", spectrum['shape']['dominant_dimensions'], help="Dominant dimensions")
 
     coords = np.array(spectrum['coords_3d'])
     sentences = spectrum['sentences']
+
+    # Ensure coords has 3 dimensions
+    if coords.ndim == 1:
+        coords = coords.reshape(1, -1)
+    
+    while coords.shape[1] < 3:
+        padding = np.zeros((coords.shape[0], 1))
+        coords = np.hstack([coords, padding])
 
     fig = go.Figure()
 
@@ -122,7 +123,7 @@ if mode == "Single Text":
     
     label = st.text_input(
         "Label (optional)",
-        placeholder="e.g. Shakespeare Sonnet 18, News article, Technical doc..."
+        placeholder="e.g. Shakespeare Sonnet 18, News article..."
     )
 
     if st.button("Read Spectrum", type="primary"):
@@ -135,7 +136,6 @@ if mode == "Single Text":
                 st.caption("The figure that forms before words appear")
                 show_spectrum(spectrum)
 
-                # Save to Louise
                 if louise and label.strip():
                     try:
                         louise.remember(label, text, spectrum)
@@ -150,10 +150,8 @@ if mode == "Single Text":
 # COMPARE MODE
 elif mode == "Compare Two Texts":
     col_a, col_b = st.columns(2)
-    
     with col_a:
         text_a = st.text_area("Text A", height=200, placeholder="First text...")
-    
     with col_b:
         text_b = st.text_area("Text B", height=200, placeholder="Second text...")
 
@@ -165,19 +163,14 @@ elif mode == "Compare Two Texts":
             if result:
                 st.markdown("---")
                 col_a, col_b = st.columns(2)
-                
                 with col_a:
                     show_spectrum(result['spectrum_a'], "Text A — Internal Structure")
-                
                 with col_b:
                     show_spectrum(result['spectrum_b'], "Text B — Internal Structure")
                 
                 st.markdown("---")
                 st.subheader("Spectral Differences")
-                st.caption("Where the two internal structures diverge")
-                
                 d_col1, d_col2, d_col3, d_col4 = st.columns(4)
-                
                 with d_col1:
                     st.metric("Size Δ", f"{result['size_difference']:.3f}")
                 with d_col2:
@@ -203,8 +196,8 @@ else:
                 st.dataframe(df, use_container_width=True)
                 st.caption(f"{len(records)} spectrums in memory")
             else:
-                st.info("Louise hasn't remembered anything yet. Analyze a text with a label to start building the dictionary.")
+                st.info("Louise hasn't remembered anything yet. Analyze a text with a label to start.")
         except Exception as e:
             st.error(f"Louise couldn't recall: {e}")
     else:
-        st.warning("Louise is not connected. Credentials file needed.")
+        st.warning("Louise is not connected. Credentials needed.")
