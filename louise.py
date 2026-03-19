@@ -8,6 +8,8 @@ Creator: Rosibis Piedra
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
+import json
+import streamlit as st
 
 
 SCOPES = [
@@ -25,9 +27,18 @@ class Louise:
     """
 
     def __init__(self, credentials_path='louise_credentials.json'):
-        creds = Credentials.from_service_account_file(
-            credentials_path, scopes=SCOPES
-        )
+        # Try Streamlit secrets first (cloud deployment)
+        try:
+            creds_dict = json.loads(st.secrets["louise_credentials"])
+            creds = Credentials.from_service_account_info(
+                creds_dict, scopes=SCOPES
+            )
+        except Exception:
+            # Fall back to local file
+            creds = Credentials.from_service_account_file(
+                credentials_path, scopes=SCOPES
+            )
+        
         client = gspread.authorize(creds)
         self.sheet = client.open_by_key(SHEET_ID).sheet1
 
