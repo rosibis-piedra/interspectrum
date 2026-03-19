@@ -7,6 +7,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
 from spectrum_analyzer import SpectrumAnalyzer
+from louise import Louise
 
 
 st.set_page_config(
@@ -22,20 +23,26 @@ st.caption("Reading the internal spectrum of AI models")
 def load_analyzer():
     return SpectrumAnalyzer()
 
+@st.cache_resource
+def load_louise():
+    try:
+        return Louise()
+    except Exception:
+        return None
+
 analyzer = load_analyzer()
+louise = load_louise()
 
 # Mode selector
 mode = st.radio(
     "Mode",
-    ["Single Text", "Compare Two Texts"],
+    ["Single Text", "Compare Two Texts", "Louise Memory"],
     horizontal=True
 )
 
 st.markdown("---")
 
 def show_spectrum(spectrum, label=""):
-    """Display metrics and 3D visualization for a spectrum."""
-    
     if label:
         st.subheader(label)
 
@@ -112,6 +119,11 @@ if mode == "Single Text":
         height=200,
         placeholder="Type or paste any text here..."
     )
+    
+    label = st.text_input(
+        "Label (optional)",
+        placeholder="e.g. Shakespeare Sonnet 18, News article, Technical doc..."
+    )
 
     if st.button("Read Spectrum", type="primary"):
         if text.strip():
@@ -122,26 +134,28 @@ if mode == "Single Text":
                 st.subheader("Internal Structure")
                 st.caption("The figure that forms before words appear")
                 show_spectrum(spectrum)
+
+                # Save to Louise
+                if louise and label.strip():
+                    try:
+                        louise.remember(label, text, spectrum)
+                        st.success(f"💾 Louise remembered: {label}")
+                    except Exception as e:
+                        st.warning(f"Louise couldn't save: {e}")
+                elif not label.strip():
+                    st.info("Add a label to save this spectrum to Louise's memory.")
         else:
             st.warning("Please enter some text first.")
 
 # COMPARE MODE
-else:
+elif mode == "Compare Two Texts":
     col_a, col_b = st.columns(2)
     
     with col_a:
-        text_a = st.text_area(
-            "Text A",
-            height=200,
-            placeholder="First text..."
-        )
+        text_a = st.text_area("Text A", height=200, placeholder="First text...")
     
     with col_b:
-        text_b = st.text_area(
-            "Text B", 
-            height=200,
-            placeholder="Second text..."
-        )
+        text_b = st.text_area("Text B", height=200, placeholder="Second text...")
 
     if st.button("Compare Spectrums", type="primary"):
         if text_a.strip() and text_b.strip():
@@ -150,8 +164,6 @@ else:
             
             if result:
                 st.markdown("---")
-                
-                # Show both spectrums side by side
                 col_a, col_b = st.columns(2)
                 
                 with col_a:
@@ -160,7 +172,6 @@ else:
                 with col_b:
                     show_spectrum(result['spectrum_b'], "Text B — Internal Structure")
                 
-                # Differences
                 st.markdown("---")
                 st.subheader("Spectral Differences")
                 st.caption("Where the two internal structures diverge")
@@ -168,17 +179,32 @@ else:
                 d_col1, d_col2, d_col3, d_col4 = st.columns(4)
                 
                 with d_col1:
-                    st.metric("Size Δ", f"{result['size_difference']:.3f}",
-                        help="Difference in semantic space occupied")
+                    st.metric("Size Δ", f"{result['size_difference']:.3f}")
                 with d_col2:
-                    st.metric("Symmetry Δ", f"{result['symmetry_difference']:.3f}",
-                        help="Difference in dimensional balance")
+                    st.metric("Symmetry Δ", f"{result['symmetry_difference']:.3f}")
                 with d_col3:
-                    st.metric("Dispersion Δ", f"{result['dispersion_difference']:.3f}",
-                        help="Difference in peak scatter")
+                    st.metric("Dispersion Δ", f"{result['dispersion_difference']:.3f}")
                 with d_col4:
-                    st.metric("Density Δ", f"{result['density_difference']:.3f}",
-                        help="Difference in gravitational center")
-
+                    st.metric("Density Δ", f"{result['density_difference']:.3f}")
         else:
             st.warning("Please enter both texts first.")
+
+# LOUISE MEMORY
+else:
+    st.subheader("💾 Louise Memory")
+    st.caption("Everything Louise has remembered so far")
+
+    if louise:
+        try:
+            records = louise.recall()
+            if records:
+                import pandas as pd
+                df = pd.DataFrame(records)
+                st.dataframe(df, use_container_width=True)
+                st.caption(f"{len(records)} spectrums in memory")
+            else:
+                st.info("Louise hasn't remembered anything yet. Analyze a text with a label to start building the dictionary.")
+        except Exception as e:
+            st.error(f"Louise couldn't recall: {e}")
+    else:
+        st.warning("Louise is not connected. Credentials file needed.")
