@@ -141,7 +141,7 @@ if mode == "Single Text":
                         louise.remember(label, text, spectrum)
                         st.success(f"💾 Louise remembered: {label}")
                     except Exception as e:
-                        st.warning(f"Louise couldn't save: {e}")
+                        st.error(f"Louise error: {e}")
                 elif not label.strip():
                     st.info("Add a label to save this spectrum to Louise's memory.")
         else:
